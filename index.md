@@ -63,7 +63,7 @@
 
 [IBL光照理论与应用](blogs/RTR/IBL光照理论与应用.md) 
 
-[球面谐波理论与应用](blogs/RTR/球面谐波理论与应用.md) 待完善
+[球面谐波理论与应用](blogs/RTR/球面谐波理论与应用.md)
 
 [Gamma矫正](blogs/RTR/Gamma矫正.md) 
 
@@ -137,7 +137,7 @@ UE4代码学习：
 
 ## 图形API
 
-[Vulkan Shader编译与加载过程](blogs/GraphicAPI/Vulkan_Shader编译与加载过程.md)  待补充Shader变种
+[Vulkan Shader编译与加载过程](blogs/GraphicAPI/Vulkan_Shader编译与加载过程.md)
 
 [Vulkan-A-Specification中文摘录](blogs/VulkanTranslate/Vulkan-A-Specification中文翻译版.md)  
 

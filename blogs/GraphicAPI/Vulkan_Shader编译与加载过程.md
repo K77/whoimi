@@ -12,7 +12,7 @@
 
 过去使用可读代码的风险，编译器实现灵活，尝试特性实现不同：The past has shown that with human-readable syntax like GLSL, some GPU vendors were rather flexible with their interpretation of the standard. If you happen to write non-trivial shaders with a GPU from one of these vendors, then you'd risk other vendor's drivers rejecting your code due to syntax errors, or worse, your shader running differently because of compiler bugs. With a straightforward bytecode format like SPIR-V that will hopefully be avoided.
 
-我们不需要手写字节码，而是需要用与供应商独立的编译器把GLSL转化成SPIR-V.编译器用来验证Shader代码是完全标准的，并且声称SPIR-V代码集成在程序中。编译器提供了library用来集成在程序中，也可以用现有编译好的程序工具。
+我们不需要手写字节码，而是需要用与供应商独立的编译器把GLSL转化成SPIR-V.编译器用来验证Shader代码是完全标准的，并且生成 SPIR-V 代码集成在程序中。编译器提供了library用来集成在程序中，也可以用现有编译好的程序工具。
 
 我们可以直接使用编译器glslangValidator.exe，不过这里使用glslc工具，因为这个工具提供了includes功能，并且它的参数和gcc和Clang很相似。这些已经集成在了VulkanSDK当中。
 
@@ -82,13 +82,13 @@ file.read(buffer.data(), fileSize);
 }
 ```
 
-### 根据字节码数据穿件Shader Modules
+### 根据字节码数据创建 Shader Modules
 
 这部分内容就进入了图形API的部分。根据ShaderModule就可以吧这个Shader代码设置成渲染状态的一部分。
 
 ## 进一步分析
 
-SPIR-V是二进制的中间吗，优点是不需要考虑供应商特性。缺点是需要考虑如何将shader语言编译成SPIR-V.
+SPIR-V 是二进制的中间码，优点是不需要考虑供应商特性。缺点是需要考虑如何将shader语言编译成SPIR-V.
 
 最好的方案是：[Khronos' glslang library](https://github.com/KhronosGroup/glslang) 和 [Google's shaderc](https://github.com/google/shaderc).
 
@@ -115,9 +115,70 @@ Vulkan当中有很多和其他变体不兼容的地方
 
 
 
-## 变体策略
+## Shader 变种与变体策略
 
-等待补充
+在 Vulkan 中，同一份 SPIR-V 可以通过不同方式产生多种“变体”行为，常见手段有：**Specialization Constants（特化常量）**、**UBO/Push Constants** 以及**多份 Shader 源码/多 Pipeline**。下面主要说明特化常量与变体策略。
+
+### Specialization Constants（特化常量）
+
+与 OpenGL/GL 中的 uniform 不同，特化常量在**创建 Pipeline 之前**就确定数值，由驱动在编译/链接阶段带入，因此编译器可以做**常量折叠、死代码消除、循环展开**等优化，得到接近“手写多份 Shader”的性能，同时只维护一份 SPIR-V。
+
+**GLSL 中声明：**
+
+```glsl
+layout(constant_id = 0) const int NUM_LIGHTS = 4;
+layout(constant_id = 1) const bool USE_SHADOW = true;
+```
+
+- `constant_id` 对应后面在 API 里填写的映射 ID。
+- 若不提供特化数据，则使用 GLSL 中的默认值。
+
+**运行时填入：C++ 侧**
+
+1. 准备一块数据（按 offset 排好各常量的值）：
+   ```cpp
+   struct SpecData {
+       int numLights;
+       uint32_t useShadow;  // bool 在 SPIR-V 中常为 32bit
+   } specData = { 4, 1 };
+   ```
+
+2. 为每个常量填写 `VkSpecializationMapEntry`（constantID、offset、size）：
+   ```cpp
+   VkSpecializationMapEntry entries[] = {
+       { 0, offsetof(SpecData, numLights), sizeof(specData.numLights) },
+       { 1, offsetof(SpecData, useShadow), sizeof(specData.useShadow) },
+   };
+   ```
+
+3. 用 `VkSpecializationInfo` 把 data、size 和 entries 绑在一起，再在创建 `VkPipeline` 时把该 `VkSpecializationInfo` 填到对应 stage 的 `pSpecializationInfo` 中（每个 stage 可各有一份）。
+
+同一份 SPIR-V + 不同的 `VkSpecializationInfo` = 不同的变体；通常对应不同的 `VkPipeline`（或通过 pipeline cache 复用编译结果）。
+
+**限制与注意：**
+
+- 特化常量一般为**标量**（int、float、bool 等）；数组不能直接作为带 `constant_id` 的常量，若需要可对每个元素单独给一个 constant_id，或通过其他方式传入。
+- 修改特化常量值即得到新变体，需要**新 Pipeline 或走 pipeline 创建流程**，因此变体数量不宜爆炸（例如按“灯光数、是否阴影、材质类型”等离散维度组合成有限个 Pipeline）。
+
+### 何时用特化常量 vs UBO / Push Constants
+
+| 方式 | 何时使用 |
+|------|----------|
+| **Specialization Constants** | 在管线创建前就确定的离散选项：灯光数量、是否用阴影、分支类型等；需要编译器做激进优化、减少运行时分支。 |
+| **Push Constants** | 每帧或每 draw 变化的小数据（矩阵、少量参数），低延迟、无 descriptor 绑定。 |
+| **UBO / SSBO** | 大量数据、或需要跨多个 draw 共享、或运行时才确定的配置。 |
+
+实践中可以：**特化常量**定“变体维度”（几盏灯、有没有阴影），**Push Constants** 传矩阵和当前帧参数，**UBO** 传大块材质/场景数据。
+
+### 多 Pipeline 与变体组合
+
+若变体维度较多（例如 灯光数 × 是否阴影 × 若干材质类型），可以：
+
+1. 为每种**常用组合**预创建一条 Pipeline，创建时对 vertex/fragment 的 `VkSpecializationInfo` 传入对应常量；
+2. 运行时根据当前“灯光数、是否阴影、材质”等选择对应 Pipeline 绑定并绘制；
+3. 使用 **Pipeline Cache**（`VkPipelineCache`）缓存已编译结果，加速同设备上的重复创建。
+
+这样既保留“Shader 变种”的优化空间，又避免运行时动态分支带来的性能损失。
 
 
 
