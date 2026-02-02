@@ -1,6 +1,8 @@
 theme: jekyll-theme-hacker
 repository: liangz0707/whoimi
 
+title: whoimi
+description: 记录日常学习和行业知识的技术博客
 
 katex: true # Enable if using math markup
 

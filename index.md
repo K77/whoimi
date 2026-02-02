@@ -111,7 +111,7 @@ UE4代码学习：
 
 [遮挡剔除简介](blogs/unity/Occluded Culling.md)
 
-[Shander当中的坐标变换和对应矩阵说明](blogs/unity/Shader当中的坐标变化.md)
+[Shader当中的坐标变换和对应矩阵说明](blogs/unity/Shader当中的坐标变化.md)
 
 [HDRP Shader当中的坐标系变换矩阵](blogs/unity/HDRPShader当中的坐标系变换矩阵.md)
 
@@ -119,7 +119,7 @@ UE4代码学习：
 
 [渲染过程中buffer的变化](blogs/unity/渲染过程中buffer的变化.md)
 
-[Shaderd打包中遇到的问题](blogs/unity/Shader打包.md)
+[Shader打包中遇到的问题](blogs/unity/Shader打包.md)
 
 [在Shader中通过深度图恢复世界坐标](blogs/unity/世界坐标恢复.md)
 
@@ -205,7 +205,7 @@ UE4代码学习：
 
 [Unity24小时基于物理的光照效果](gallerys/unity24h.md)
 
-[米哈游原神细节实现猜测.md](blogs/GameAnalysis/米哈游原神细节实现猜测.md)
+[米哈游原神细节实现猜测](blogs/GameAnalysis/米哈游原神细节实现猜测.md)
 
 [HDRP场景反射](blogs/HDRPartist/场景反射策略.md)
 
@@ -235,7 +235,7 @@ UE4代码学习：
 
 [3.渲染参数](blogs/HDRPsource/3.渲染参数.md)
 
-[4.LitShader分析](4.LitShader分析.md)
+[4.LitShader分析](blogs/HDRPsource/4.LitShader分析.md)
 
 [5.UnityHDRP光源配置](blogs/HDRPsource/5.UnityHDRP光源配置.md)
 

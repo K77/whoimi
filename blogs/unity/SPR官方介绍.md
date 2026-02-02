@@ -149,7 +149,7 @@ opaqueRange.layerMask = ~0;
 - Sorting - 物体绘制顺序。
 - 每个渲染标志 - 传递内部参数。
 - 渲染标志 - 动态合并实例化技术等等算法
-- Shander Pass -当前的draw使用哪一个pass
+- Shader Pass -当前的draw使用哪一个pass
 
 ```c#
 // Create the draw render settings
